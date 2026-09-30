@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ta">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <meta name="theme-color" content="#131722" />
+  <title>NIFTY Greeks</title>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+  :root { color-scheme: dark; }
+    :root { --bg:#0b0e14; --card:#131722; --line:#2a2e39; --txt:#d1d4dc; --mut:#787b86; --ce:#22c55e; --pe:#f23645; --df:#5b8cff; --acc:#2962ff; }
+    * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    body { margin:0; font-family:"Segoe UI",system-ui,sans-serif; background:var(--bg); color:var(--txt); padding-bottom:20px; }
+    .wrap { max-width:480px; margin:0 auto; }
+
+    .ix { display:flex; gap:6px; padding:8px 10px; background:#0f131b; border-bottom:1px solid var(--line); }
+    .ix button { flex:1; border:1px solid var(--line); background:var(--card); color:var(--mut); font-weight:800; font-size:.86rem; letter-spacing:.04em; padding:9px 0; border-radius:10px; cursor:pointer; }
+    .ix button.on { background:#f5f7fa; color:#0b0e14; border-color:#f5f7fa; }
+    .hdr { background:var(--card); border-bottom:1px solid var(--line); padding:10px 12px 8px; }
+    .r1 { display:flex; align-items:center; gap:8px; }
+    .r1 b { font-size:1rem; color:#fff; }
+    .live { font-size:.6rem; font-weight:800; padding:2px 8px; border-radius:999px; background:rgba(34,197,94,.15); color:var(--ce); display:inline-flex; gap:5px; align-items:center; }
+    .live i { width:6px; height:6px; border-radius:50%; background:var(--ce); animation:p 1.2s infinite; }
+    .live.off { background:#2a2e39; color:var(--mut); } .live.off i { background:var(--mut); animation:none; }
+    @keyframes p { 50% { opacity:.25; } }
+    .r1 .t { margin-left:auto; font-size:.72rem; color:var(--mut); font-weight:700; }
+    .info { border:1px solid var(--line); background:#1e222d; color:var(--txt); border-radius:6px; font-size:.72rem; font-weight:800; padding:3px 8px; cursor:pointer; }
+    .r2 { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:8px; }
+    .r2 .k { font-size:.55rem; font-weight:800; color:var(--mut); text-transform:uppercase; }
+    .r2 .v { font-size:.86rem; font-weight:800; color:#fff; white-space:nowrap; }
+    .more { display:none; grid-template-columns:1fr 1fr; gap:4px 10px; margin-top:8px; font-size:.7rem; color:var(--mut); border-top:1px solid var(--line); padding-top:6px; }
+    .more b { color:var(--txt); } .more.on { display:grid; }
+    .msg { display:none; margin:8px 10px 0; padding:7px 10px; border:1px dashed #f59e0b; background:rgba(245,158,11,.08); border-radius:8px; font-size:.74rem; font-weight:700; color:#fbbf24; }
+
+    .sum { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; padding:8px 10px 0; }
+    .sc { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:6px 8px; text-align:center; cursor:pointer; }
+    .sc .t { font-size:.56rem; font-weight:800; color:var(--mut); text-transform:uppercase; }
+    .bd { display:inline-block; margin-top:3px; font-size:.74rem; font-weight:800; padding:2px 8px; border-radius:7px; background:#2a2e39; color:var(--mut); }
+    .bd.Bearish { background:rgba(242,54,69,.15); color:var(--pe); } .bd.Bullish { background:rgba(34,197,94,.15); color:var(--ce); }
+
+    .tabs { position:sticky; top:0; z-index:5; background:var(--bg); padding:8px 10px 6px; display:flex; gap:6px; }
+    .tabs button { flex:1; border:1px solid var(--line); background:var(--card); color:var(--mut); font-weight:800; font-size:.78rem; padding:8px 0; border-radius:9px; cursor:pointer; }
+    .tabs button.on { background:var(--acc); color:#fff; border-color:var(--acc); }
+
+    .card { background:var(--card); border:1px solid var(--line); border-radius:12px; margin:0 10px 10px; overflow:hidden; }
+    .ch { display:flex; align-items:center; gap:8px; padding:8px 10px 2px; }
+    .ch .ti { font-weight:800; font-size:.88rem; color:#fff; }
+    .ch .su { font-size:.6rem; color:var(--mut); font-weight:700; }
+    .sp { flex:1; }
+    .seg { display:inline-flex; background:#1e222d; border-radius:8px; padding:2px; flex:none; }
+    .seg button { border:0; background:transparent; font-size:.68rem; font-weight:800; color:var(--mut); padding:5px 8px; border-radius:6px; cursor:pointer; }
+    .seg button.on { background:var(--acc); color:#fff; }
+    .reset { border:1px solid #434651; background:#2a2e39; color:var(--pe); font-weight:800; font-size:.72rem; padding:6px 10px; border-radius:8px; white-space:nowrap; cursor:pointer; }
+    .plot { width:100%; height:300px; }
+    .lgTop { display:flex; gap:14px; padding:6px 10px 0; font-size:.7rem; font-weight:800; flex-wrap:wrap; }
+    .lgTop i { display:inline-block; width:16px; height:4px; border-radius:2px; margin-right:5px; vertical-align:middle; }
+    .lgTop i.dot { height:0; border-top:2px dotted var(--df); }
+    .spLg { margin-left:auto; border:1px solid #3a3320; background:#1c1a12; color:#e0b341; font:inherit; font-weight:800; border-radius:6px; padding:1px 8px; cursor:pointer; }
+    .spLg i { background:#e0b341; opacity:.7; }
+    .spLg.off { color:#6b6e78; border-color:#2a2e39; background:transparent; text-decoration:line-through; }
+    .spLg.off i { background:#6b6e78; }
+    .mv { border-top:1px solid var(--line); padding:4px 10px 6px; }
+    .mv:empty { display:none; }
+    .mv .row { display:flex; align-items:center; gap:6px; margin:4px 0; overflow-x:auto; scrollbar-width:none; }
+    .mv .row::-webkit-scrollbar { display:none; }
+    .mv .who { font-size:.64rem; font-weight:800; min-width:34px; flex:none; }
+    .chip { flex:none; font-size:.66rem; font-weight:800; padding:2px 7px; border-radius:6px; background:#1e222d; white-space:nowrap; }
+    .chip small { color:var(--mut); font-weight:700; margin-right:4px; }
+    .vlg { display:flex; gap:12px; flex-wrap:wrap; padding:0 10px 4px; font-size:.64rem; font-weight:800; }
+    .vlg i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; vertical-align:middle; }
+    .empty { padding:40px 10px; text-align:center; color:var(--mut); font-weight:700; font-size:.8rem; }
+
+    .kp { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; padding:4px 10px 10px; }
+    .kp .k { border:1px solid var(--line); border-radius:8px; padding:5px 7px; background:#171b26; min-width:0; }
+    .kp .k .t { font-size:.56rem; font-weight:800; color:var(--mut); text-transform:uppercase; }
+    .kp .k .n { font-size:1rem; font-weight:800; }
+    .kp .k .d { font-size:.6rem; font-weight:800; }
+    .kp .ce { border-top:3px solid var(--ce); } .kp .pe { border-top:3px solid var(--pe); } .kp .df { border-top:3px solid var(--df); }
+    .up { color:var(--ce); } .dn { color:var(--pe); }
+
+    details { border-top:1px solid var(--line); }
+    summary { list-style:none; padding:9px 10px; font-size:.76rem; font-weight:800; color:var(--txt); cursor:pointer; }
+    summary::-webkit-details-marker { display:none; }
+    summary::after { content:"▾"; float:right; color:var(--mut); }
+    details[open] summary::after { content:"▴"; }
+    .tw { max-height:300px; overflow:auto; }
+    table { border-collapse:collapse; width:100%; font-size:.72rem; font-variant-numeric:tabular-nums; }
+    th, td { padding:5px 8px; border-bottom:1px solid #1e222d; text-align:right; white-space:nowrap; }
+    th { position:sticky; top:0; background:#1e222d; font-size:.56rem; color:var(--mut); text-transform:uppercase; }
+    td.l, th.l { text-align:left; }
+    .tg { font-size:.58rem; font-weight:800; padding:1px 5px; border-radius:5px; background:#2a2e39; color:var(--mut); }
+    .tg.Bearish { background:rgba(242,54,69,.15); color:var(--pe); } .tg.Bullish { background:rgba(34,197,94,.15); color:var(--ce); }
+
+    .ctl { display:flex; gap:6px; flex-wrap:wrap; padding:2px 10px 6px; }
+    .ctl::-webkit-scrollbar { display:none; }
+    .vk { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; padding:2px 10px 6px; }
+    .vk .t { font-size:.55rem; font-weight:800; color:var(--mut); text-transform:uppercase; }
+    .vk .n { font-size:.95rem; font-weight:800; }
+    .vplot { width:100%; height:380px; }
+    .hint { font-size:.62rem; color:var(--mut); font-weight:600; text-align:center; padding:0 10px 8px; }
+    .foot { font-size:.62rem; color:var(--mut); text-align:center; padding:6px 14px; line-height:1.5; }
+
+    @media (min-width:900px) {
+      .wrap { max-width:1180px; }
+      .sum { grid-template-columns:repeat(3,minmax(0,220px)); }
+      .tabs { max-width:560px; }
+      .gbody { display:grid; grid-template-columns:minmax(0,1fr) 380px; }
+      .gbody .side { border-left:1px solid var(--line); }
+      .gbody details { border-top:0; }
+      .plot { height:440px; } .vplot { height:520px; }
+      .hint .touch { display:none; }
+    }
+    @media (max-width:899px) { .hint .mouse { display:none; } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="ix" id="ix"><button type="button" data-i="NIFTY">NIFTY</button><button type="button" data-i="SENSEX">SENSEX</button></div>
+  <div class="hdr">
+    <div class="r1"><b id="hTitle">NIFTY · Greeks</b><span class="live off" id="live"><i></i>LIVE</span><span class="t" id="hLast">—</span><button class="info" id="infoBtn" type="button">ⓘ</button></div>
+    <div class="r2">
+      <div><div class="k">Spot</div><div class="v" id="hSpot">—</div></div>
+      <div><div class="k">ATM</div><div class="v" id="hAtm">—</div></div>
+      <div><div class="k">Expiry</div><div class="v" id="hExp">—</div></div>
+      <div><div class="k">ATM IV</div><div class="v" id="hIv">—</div></div>
+    </div>
+    <div class="more" id="more">
+      <div>Base (09:16) ATM: <b id="hBase">—</b></div><div>Unit: <b id="hLot">—</b></div>
+      <div>CE <b id="hCe">—</b></div><div>PE <b id="hPe">—</b></div><div>Worker: <b id="hState">—</b></div>
+    </div>
+  </div>
+  <div class="msg" id="msg"></div>
+
+  <div class="sum">
+    <div class="sc" data-go="Vega"><div class="t">Vega</div><span class="bd" id="iVega">—</span></div>
+    <div class="sc" data-go="Theta"><div class="t">Theta</div><span class="bd" id="iTheta">—</span></div>
+    <div class="sc" data-go="OI"><div class="t">OI</div><span class="bd" id="iOI">—</span></div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button type="button" data-t="Vega">Vega</button><button type="button" data-t="Theta">Theta</button><button type="button" data-t="OI">OI</button><button type="button" data-t="Net">Net Δ</button>
+  </div>
+
+  <div id="gCard" class="card">
+    <div class="ch">
+      <div><div class="ti" id="gTitle">Vega</div><div class="su" id="gSub">—</div></div>
+      <span class="sp"></span>
+      <div class="seg" id="modeSeg"><button type="button" data-m="chg">Change</button><button type="button" data-m="abs">Total</button></div>
+      <button class="reset" id="gReset" type="button">⟲ Reset</button>
+    </div>
+    <div class="gbody">
+      <div>
+        <div class="lgTop"><span style="color:var(--ce)"><i style="background:var(--ce)"></i>Call (CE)</span><span style="color:var(--pe)"><i style="background:var(--pe)"></i>Put (PE)</span><span style="color:var(--df)"><i class="dot"></i>Diff (Put − Call)</span><button type="button" class="spLg" id="spLg" title="Background index chart on/off"><i></i><b id="spName">NIFTY</b> <span id="spVal"></span></button></div>
+        <div class="plot" id="gPlot"><div class="empty">Data load ஆகுது…</div></div>
+        <div class="mv" id="mv"></div>
+      </div>
+      <div class="side">
+        <div class="kp" id="kp"></div>
+        <details id="tblBox"><summary>☰ Table (1 நிமிஷ rows)</summary><div class="tw"><table id="gTbl"></table></div></details>
+      </div>
+    </div>
+  </div>
+
+  <div id="vCard" class="card" style="display:none">
+    <div class="ch">
+      <div><div class="ti">Vega Net Δ (Call − Put)</div><div class="su" id="vSub">spot candle + net vega bars</div></div>
+      <span class="sp"></span>
+      <button class="reset" id="vReset" type="button">⟲ Reset</button>
+    </div>
+    <div class="ctl">
+      <div class="seg" id="vTf"></div>
+      <div class="seg" id="vTy"><button type="button" data-v="candle">🕯</button><button type="button" data-v="line">📈</button></div>
+      <div class="seg" id="vVw"><button type="button" data-v="30">30m</button><button type="button" data-v="60">1h</button><button type="button" data-v="120">2h</button><button type="button" data-v="0">நாள்</button></div>
+    </div>
+    <div class="vk" id="vk"></div>
+    <div class="vlg"><span style="color:var(--ce)"><i style="background:var(--ce)"></i>பச்சை bar = Call vega அதிகமா ஏறுச்சு</span><span style="color:var(--pe)"><i style="background:var(--pe)"></i>சிவப்பு bar = Put vega அதிகமா ஏறுச்சு</span></div>
+    <div class="vplot" id="vPlot"><div class="empty">Data load ஆகுது…</div></div>
+    <div class="hint"><span class="touch">👆 இழு = நகர்த்து · ✌ pinch = zoom</span><span class="mouse">Drag = நகர்த்து · Wheel = zoom</span> · ⟲ Reset = default view</div>
+  </div>
+
+  <p class="foot">பச்சை = Call (CE) · சிவப்பு = Put (PE) · கீழ row = swing-ல இருந்து swing வரை move · தடிமன் line = ஏற்றம் · Diff = Put − Call · 09:16 முதல் 1 நிமிஷ data · Black-76 IV · strikes 09:16 ATM-ல fix</p>
+</div>
+
+<script>
+  const CFG = {"port": 0, "base": "", "snap": true};
+  const API = CFG.base ?? `http://127.0.0.1:${CFG.port}`;
+  const URLS = CFG.snap
+    ? { greeks: i => `greeks_${i}.json`, spot: i => `spot_${i}.json` }
+    : { greeks: i => `${API}/greeks?index=${i}`, spot: (i, d) => `${API}/spot_ohlc?index=${i}&day=${d}` };
+  const TABS = ["Vega", "Theta", "OI"];
+  const UNIT = { Vega: "₹/lot per 1% IV", Theta: "₹/lot decay/day", OI: "லட்சம்" };
+  const DEC = { Vega: 1, Theta: 1, OI: 2 };
+  const NAME = { ce: "CALL", pe: "PUT" };
+  const T = { bg: "#131722", grid: "#1f2430", zero: "#787b86", txt: "#9598a1", ce: ["#22c55e", "34,197,94"], pe: ["#f23645", "242,54,69"], df: "#5b8cff", sp: "#e0b341" };
+  const PREF = "greeksV2";
+  const S = { idx: "NIFTY", tab: "Vega", mode: "chg", tf: 1, type: "candle", view: 60, spot: true };
+  try { Object.assign(S, JSON.parse(localStorage.getItem(PREF) || "{}")); } catch (e) {}
+  const save = () => { try { localStorage.setItem(PREF, JSON.stringify(S)); } catch (e) {} };
+  const cfg = { displayModeBar: false, responsive: true, scrollZoom: true, doubleClick: false };
+  const $ = id => document.getElementById(id);
+  const sg = (v, d = 1) => v == null ? "—" : (v > 0 ? "+" : "") + Number(v).toFixed(d);
+  const cls = v => v == null ? "" : v > 0 ? "up" : v < 0 ? "dn" : "";
+  const inf = (b, ce, pe) => ce == null || pe == null ? "No View" : b === "OI"
+    ? (Math.abs(ce - pe) < 1 ? "No View" : ce > pe ? "Bearish" : "Bullish")
+    : (pe > 0 && ce < 0 ? "Bearish" : ce > 0 && pe < 0 ? "Bullish" : "No View");
+
+  let J = null, M = null, lastKey = "", resetN = { g: 0, v: 0 };
+
+  function minuteRows() {
+    const it = J.cols.indexOf("time"), out = [];
+    for (const r of J.rows) {
+      const m = String(r[it]).slice(0, 5);
+      if (out.length && out[out.length - 1].m === m) out[out.length - 1].r = r;
+      else out.push({ m, r });
+    }
+    return out;
+  }
+  function series(b) {
+    const C = J.cols, sfx = S.mode === "chg" ? "" : "_abs", iCe = C.indexOf(`CE_${b}${sfx}`), iPe = C.indexOf(`PE_${b}${sfx}`), iSp = C.indexOf("spot");
+    const x = [], t = [], ce = [], pe = [], sp = [];
+    for (const { m, r } of M) {
+      if (r[iCe] == null || r[iPe] == null) continue;
+      x.push(`${J.day} ${m}:00`); t.push(m); ce.push(r[iCe]); pe.push(r[iPe]); sp.push(iSp < 0 ? null : r[iSp]);
+    }
+    return { x, t, ce, pe, sp, df: pe.map((v, i) => +(v - ce[i]).toFixed(2)) };
+  }
+
+  function zigzag(y, frac, minGap) {
+    const thr = (Math.max(...y) - Math.min(...y)) * frac, out = [];
+    if (!thr) return [[y.length - 1, "now"]];
+    let dir = 0, hi = 0, lo = 0;
+    for (let i = 1; i < y.length; i++) {
+      if (y[i] > y[hi]) hi = i;
+      if (y[i] < y[lo]) lo = i;
+      const last = out.length ? out[out.length - 1][0] : -Infinity;
+      if (dir >= 0 && y[hi] - y[i] > thr && hi - last >= minGap) { out.push([hi, "H"]); dir = -1; lo = i; }
+      else if (dir <= 0 && y[i] - y[lo] > thr && lo - last >= minGap) { out.push([lo, "L"]); dir = 1; hi = i; }
+    }
+    while (out.length && Math.abs(y[out[0][0]] - y[0]) < thr) out.shift();
+    const n = y.length - 1;
+    if (!out.length || out[out.length - 1][0] !== n) out.push([n, "now"]);
+    return out;
+  }
+  function shiftMin(s, m) {
+    const d = new Date(new Date(s.replace(" ", "T")).getTime() + m * 60000), p = v => String(v).padStart(2, "0");
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:00`;
+  }
+  function grad(y, rgb, amax) {
+    const lo = Math.min(0, ...y), hi = Math.max(0, ...y), z = hi === lo ? 0 : -lo / (hi - lo), a = v => `rgba(${rgb},${v})`, s = [];
+    if (z > 0) s.push([0, a(amax)], [z * 0.5, a(0)]);
+    s.push([z, a(0)]);
+    if (z < 1) s.push([z + (1 - z) * 0.5, a(0)], [1, a(amax)]);
+    return { type: "vertical", colorscale: s.length > 1 ? s : [[0, a(0)], [1, a(0)]] };
+  }
+
+  function drawG() {
+    const b = S.tab, s = series(b), d = DEC[b], el = $("gPlot");
+    $("gTitle").textContent = b;
+    $("gSub").textContent = `${S.mode === "chg" ? "change from 09:16" : "total now"} · ${UNIT[b]}`;
+    if (s.x.length < 2) { Plotly.purge(el); el.innerHTML = `<div class="empty">இன்னும் data இல்லை…</div>`; $("kp").innerHTML = ""; $("gTbl").innerHTML = ""; $("mv").innerHTML = ""; return; }
+    const em = el.querySelector(".empty"); if (em) em.remove();
+    const { x, ce, pe, df, sp } = s, tr = [], ann = [], legs = {}, n = x.length - 1, md = b === "OI" ? 2 : 0;
+    const spv = sp.filter(v => v != null), showSp = S.spot && spv.length > 1;
+    let y2 = null;
+    const lastSp = spv.length ? spv[spv.length - 1] : null;
+    $("spName").textContent = S.idx;
+    $("spVal").textContent = lastSp == null ? "" : Number(lastSp).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+    $("spLg").classList.toggle("off", !S.spot);
+    if (showSp) {
+      const lo = Math.min(...spv), hi = Math.max(...spv), pad = (hi - lo) * .08 || 5;
+      y2 = [lo - pad, hi + pad];
+      tr.push({ x, y: sp, yaxis: "y2", type: "scatter", mode: "lines", connectgaps: true, line: { color: T.sp, width: 1.6 }, opacity: .55,
+        hovertemplate: `${S.idx} <b>%{y:,.2f}</b><extra></extra>` });
+    }
+    ["pe", "ce"].forEach(k => { const y = k === "ce" ? ce : pe; tr.push({ x, y, type: "scatter", mode: "lines", fill: "tozeroy", fillgradient: grad(y, T[k][1], .24), line: { width: 0 }, hoverinfo: "skip" }); });
+    tr.push({ x, y: df, type: "scatter", mode: "lines", line: { color: T.df, width: 1.3, dash: "dot" }, opacity: .7, hovertemplate: `Diff (Put−Call) <b>%{y:+.${d}f}</b><extra></extra>` });
+    ["pe", "ce"].forEach(k => {
+      const y = k === "ce" ? ce : pe, col = T[k][0], z = [[0, "start"], ...zigzag(y, .18, 8)];
+      legs[k] = [];
+      for (let j = 1; j < z.length; j++) {
+        const a = z[j - 1][0], bb = z[j][0], up = y[bb] >= y[a], xs = x.slice(a, bb + 1), ys = y.slice(a, bb + 1), w = up ? 3 : 1.7;
+        tr.push({ x: xs, y: ys, type: "scatter", mode: "lines", hoverinfo: "skip", line: { color: T.bg, width: w + 3 } });
+        tr.push({ x: xs, y: ys, type: "scatter", mode: "lines", hoverinfo: "skip", line: { color: col, width: w } });
+        legs[k].push({ a, b: bb, mv: y[bb] - y[a], up });
+      }
+      const sw = z.slice(1, -1);
+      tr.push({ x: sw.map(q => x[q[0]]), y: sw.map(q => y[q[0]]), type: "scatter", mode: "markers", hoverinfo: "skip", marker: { size: 7, color: T.bg, line: { color: col, width: 2 } } });
+      tr.push({ x, y, type: "scatter", mode: "lines", line: { width: 0 }, hovertemplate: `${NAME[k]} <b>%{y:+.${d}f}</b><extra></extra>` });
+      tr.push({ x: [x[n]], y: [y[n]], type: "scatter", mode: "markers", hoverinfo: "skip", marker: { size: 8, color: col } });
+    });
+    const rng = Math.max(...ce, ...pe) - Math.min(...ce, ...pe) || 1, push = Math.abs(ce[n] - pe[n]) / rng < .1 ? 11 : 0;
+    ["ce", "pe"].forEach(k => {
+      const v = k === "ce" ? ce[n] : pe[n], above = k === "ce" ? ce[n] >= pe[n] : pe[n] > ce[n];
+      ann.push({ x: x[n], y: v, xanchor: "left", xshift: 8, yshift: above ? push : -push, showarrow: false,
+        text: `<b>${NAME[k]} ${sg(v, md)}</b>`, font: { size: 10, color: "#fff" }, bgcolor: T[k][0], borderpad: 3 });
+    });
+    const row = k => `<div class="row"><span class="who" style="color:${T[k][0]}">${NAME[k]}</span>${legs[k].slice(-5).reverse().map(l =>
+      `<span class="chip ${l.up ? "up" : "dn"}"><small>${s.t[l.a]}→${s.t[l.b]}</small>${l.up ? "↑" : "↓"}${Math.abs(l.mv).toFixed(md)}</span>`).join("")}</div>`;
+    $("mv").innerHTML = row("ce") + row("pe");
+    Plotly.react(el, tr, {
+      margin: { l: 44, r: 92, t: 8, b: 28 }, showlegend: false, dragmode: "pan", hovermode: "x unified",
+      paper_bgcolor: T.bg, plot_bgcolor: T.bg, font: { size: 11, color: T.txt },
+      hoverlabel: { bgcolor: "#1e222d", bordercolor: "#434651", font: { color: "#d1d4dc", size: 11 } },
+      xaxis: { type: "date", tickformat: "%H:%M", gridcolor: T.grid, nticks: window.innerWidth < 600 ? 5 : 8, linecolor: T.grid, range: [shiftMin(x[0], -4), shiftMin(x[n], 2)] },
+      yaxis: { gridcolor: T.grid, zerolinecolor: T.zero, zerolinewidth: 1.6, fixedrange: true },
+      yaxis2: { overlaying: "y", side: "right", range: y2 || [0, 1], showticklabels: false, showgrid: false, zeroline: false, fixedrange: true },
+      annotations: ann, uirevision: `${S.idx}|${J.day}|${b}|${S.mode}|${resetN.g}` }, cfg);
+
+    const dl = a => n ? a[n] - a[n - 1] : null;
+    const kc = (c, lab, v, dv) => `<div class="k ${c}"><div class="t">${lab} · ${s.t[n]}</div><div class="n ${cls(v)}">${sg(v, d)}</div><div class="d ${cls(dv)}">${dv > 0 ? "▲" : dv < 0 ? "▼" : "•"} ${sg(dv, d)} / min</div></div>`;
+    $("kp").innerHTML = kc("ce", "Call", ce[n], dl(ce)) + kc("pe", "Put", pe[n], dl(pe)) + kc("df", "Diff", df[n], dl(df));
+    if ($("tblBox").open || window.innerWidth >= 900) {
+      const rows = [];
+      for (let i = n; i >= 0; i--) {
+        const v = inf(b, ce[i], pe[i]);
+        rows.push(`<tr><td class="l">${s.t[i]}</td><td class="${cls(ce[i])}">${sg(ce[i], d)}</td><td class="${cls(pe[i])}">${sg(pe[i], d)}</td><td class="${cls(df[i])}">${sg(df[i], d)}</td><td class="l"><span class="tg ${v}">${v}</span></td></tr>`);
+      }
+      $("gTbl").innerHTML = `<tr><th class="l">Time</th><th>Call</th><th>Put</th><th>Diff</th><th class="l">View</th></tr>` + rows.join("");
+    }
+  }
+
+  const VC = (() => {
+    const OPEN = 9 * 60 + 15, MIN = 60000;
+    let spot = null, B = [], fitting = false, bound = false;
+    const p2 = n => String(n).padStart(2, "0");
+    const toMin = t => { const [h, m] = String(t).split(":").map(Number); return h * 60 + m; };
+    const ms = s => new Date(String(s).replace(" ", "T")).getTime();
+    const fmt = t => { const d = new Date(t); return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`; };
+    const label = v => v == null ? "Neutral" : v > 3 ? "Bullish" : v < -3 ? "Bearish" : "Neutral";
+    const spotOk = () => spot && spot.ok && spot.day === J.day && (spot.index || "NIFTY") === S.idx;
+
+    function build() {
+      const C = J.cols, it = C.indexOf("time"), ice = C.indexOf("CE_Vega"), ipe = C.indexOf("PE_Vega"), isp = C.indexOf("spot");
+      const vm = new Map(), sm = new Map();
+      for (const r of J.rows) if (r[ice] != null && r[ipe] != null) vm.set(toMin(r[it]), { ce: r[ice], pe: r[ipe], sp: r[isp] });
+      if (spotOk()) spot.t.forEach((t, i) => sm.set(toMin(t), { o: spot.o[i], h: spot.h[i], l: spot.l[i], c: spot.c[i] }));
+      if (!sm.size) vm.forEach((v, k) => { if (v.sp != null) sm.set(k, { o: v.sp, h: v.sp, l: v.sp, c: v.sp }); });
+      const keys = [...new Set([...vm.keys(), ...sm.keys()])].sort((a, b) => a - b), out = [];
+      for (const k of keys) {
+        const bk = OPEN + Math.floor((k - OPEN) / S.tf) * S.tf;
+        let b = out[out.length - 1];
+        if (!b || b.min !== bk) { b = { min: bk, o: null, h: null, l: null, c: null, lce: null, lpe: null }; out.push(b); }
+        const s = sm.get(k), v = vm.get(k);
+        if (s) { if (b.o == null) { b.o = s.o; b.h = s.h; b.l = s.l; } b.h = Math.max(b.h, s.h); b.l = Math.min(b.l, s.l); b.c = s.c; }
+        if (v) { b.lce = v.ce; b.lpe = v.pe; }
+      }
+      let pce = 0, ppe = 0;
+      return out.map(b => {
+        const t = `${p2(Math.floor(b.min / 60))}:${p2(b.min % 60)}`, x = `${J.day} ${t}:00`;
+        let ce = null, pe = null, net = null;
+        if (b.lce != null) { ce = +(b.lce - pce).toFixed(1); pe = +(b.lpe - ppe).toFixed(1); net = +(ce - pe).toFixed(1); pce = b.lce; ppe = b.lpe; }
+        return { ...b, t, x, xm: ms(x), ce, pe, net };
+      });
+    }
+    const bounds = () => [B[0].xm - S.tf * MIN * 2, B[B.length - 1].xm + S.tf * MIN * 3];
+    const defRange = () => { const [lo, hi] = bounds(); return S.view ? [Math.max(lo, hi - Math.max(S.view, 12 * S.tf) * MIN), hi] : [lo, hi]; };
+
+    function kpis() {
+      const withV = B.filter(b => b.net != null), withS = B.filter(b => b.c != null), b = withV[withV.length - 1], s = withS[withS.length - 1];
+      const cum = withV.reduce((a, x) => a + x.net, 0), mom = label(b && b.net);
+      $("vk").innerHTML = `
+        <div><div class="t">${S.idx} ${s ? s.t : ""}</div><div class="n ${s ? cls(s.c - s.o) : ""}">${s ? s.c.toLocaleString("en-IN", { maximumFractionDigits: 1 }) : "—"}</div></div>
+        <div><div class="t">Net Δ (${S.tf}m)</div><div class="n ${cls(b && b.net)}">${sg(b && b.net)}</div></div>
+        <div><div class="t">இன்னிக்கு total · ${mom}</div><div class="n ${cls(cum)}">${sg(cum)}</div></div>`;
+      $("vSub").textContent = `${S.idx} ${S.tf}m candle + அதே நேர Net vega Δ`;
+    }
+    function fitY() {
+      const el = $("vPlot");
+      if (fitting || !B.length || !el.layout) return;
+      const r = el.layout.xaxis.range, a = ms(r[0]), b = ms(r[1]), vis = B.filter(x => x.xm + S.tf * MIN > a && x.xm < b);
+      const nv = vis.filter(x => x.net != null).map(x => x.net), sv = vis.filter(x => x.c != null);
+      const lo = Math.min(0, ...nv), hi = Math.max(0, ...nv), pad = (hi - lo) * .18 || 5, upd = { "yaxis.range": [lo - pad, hi + pad] };
+      if (sv.length) { const slo = Math.min(...sv.map(x => x.l)), shi = Math.max(...sv.map(x => x.h)), sp = (shi - slo) * .1 || 5; upd["yaxis2.range"] = [slo - sp, shi + sp]; }
+      fitting = true;
+      Plotly.relayout(el, upd).finally(() => { fitting = false; });
+    }
+    function draw(keepRange) {
+      const el = $("vPlot");
+      B = build();
+      if (!B.length) { Plotly.purge(el); bound = false; el.innerHTML = `<div class="empty">இன்னும் vega data இல்லை…</div>`; return; }
+      const em = el.querySelector(".empty"); if (em) em.remove();
+      kpis();
+      let r = defRange();
+      if (keepRange && el.layout && el.layout.xaxis) {
+        const cur = el.layout.xaxis.range.map(ms), [, hi] = bounds(), span = cur[1] - cur[0];
+        r = cur[1] >= hi - S.tf * MIN * 4 ? [hi - span, hi] : cur;
+      }
+      const cs = B.filter(b => b.c != null), vs = B.filter(b => b.net != null), net = vs.map(b => b.net);
+      const spTr = S.type === "candle"
+        ? { x: cs.map(b => b.x), open: cs.map(b => b.o), high: cs.map(b => b.h), low: cs.map(b => b.l), close: cs.map(b => b.c), type: "candlestick", yaxis: "y2", whiskerwidth: 0, hoverinfo: "x+y",
+            increasing: { line: { color: T.ce[0], width: 1 }, fillcolor: T.ce[0] }, decreasing: { line: { color: T.pe[0], width: 1 }, fillcolor: T.pe[0] } }
+        : { x: cs.map(b => b.x), y: cs.map(b => b.c), type: "scatter", mode: "lines", yaxis: "y2", line: { color: "#5b8cff", width: 2 }, hovertemplate: "Spot %{y:,.2f}<extra></extra>" };
+      Plotly.react(el, [spTr,
+        { x: vs.map(b => b.x), y: net, type: "bar", marker: { color: net.map(v => v >= 0 ? T.ce[0] : T.pe[0]) }, customdata: vs.map(b => [b.ce, b.pe]),
+          hovertemplate: "Net Δ <b>%{y:+.1f}</b> · Call %{customdata[0]:+.1f} · Put %{customdata[1]:+.1f}<extra></extra>" }],
+        { margin: { l: 8, r: 54, t: 8, b: 28 }, showlegend: false, dragmode: "pan", hovermode: "x unified", bargap: .2,
+          paper_bgcolor: T.bg, plot_bgcolor: T.bg, font: { size: 11, color: T.txt },
+          hoverlabel: { bgcolor: "#1e222d", bordercolor: "#434651", font: { color: "#d1d4dc" } },
+          xaxis: { type: "date", tickformat: "%H:%M", gridcolor: T.grid, nticks: 6, range: [fmt(r[0]), fmt(r[1])], rangeslider: { visible: false } },
+          yaxis: { domain: [0, .36], side: "right", gridcolor: T.grid, zerolinecolor: T.zero, fixedrange: true },
+          yaxis2: { domain: [.42, 1], side: "right", gridcolor: T.grid, fixedrange: true, tickformat: ",.0f" } }, cfg).then(() => {
+        if (!bound) { bound = true; el.on("plotly_relayout", ev => { if (!fitting && Object.keys(ev).some(k => k.startsWith("xaxis"))) fitY(); }); }
+        fitY();
+      });
+    }
+    async function pollSpot() {
+      if (!J) return;
+      if (spotOk() && !J.is_today) return;
+      const want = S.idx;
+      try {
+        const j = await (await fetch(URLS.spot(want, J.day), { cache: "no-store" })).json();
+        if (j.ok && want === S.idx) { spot = { index: want, ...j }; if (S.tab === "Net") draw(true); }
+      } catch (e) {}
+    }
+    const clear = () => { spot = null; B = []; bound = false; };
+    return { draw, pollSpot, clear };
+  })();
+
+  function markSeg(id, attr, val) { document.querySelectorAll(`#${id} button`).forEach(b => b.classList.toggle("on", b.dataset[attr] === String(val))); }
+  function show(t) {
+    S.tab = t; save();
+    document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
+    const net = t === "Net";
+    $("gCard").style.display = net ? "none" : "";
+    $("vCard").style.display = net ? "" : "none";
+    if (!J) return;
+    if (net) { VC.draw(false); VC.pollSpot(); } else drawG();
+  }
+  function showMsg(t) { const m = $("msg"); m.style.display = t ? "block" : "none"; m.textContent = t || ""; }
+
+  async function poll() {
+    let R;
+    const want = S.idx;
+    try { R = await (await fetch(URLS.greeks(want), { cache: "no-store" })).json(); }
+    catch (e) { showMsg("Feed இணைப்பு இல்லை — கொஞ்ச நேரத்துல refresh பண்ணுங்க."); return; }
+    if (want !== S.idx || (R.index && R.index !== want)) return;
+    const st = R.status || {};
+    $("hState").textContent = st.state ? `${st.state}${st.error ? " · " + st.error.slice(0, 60) : ""}` : "—";
+    if (!R.ok || !R.rows || !R.rows.length) {
+      showMsg(st.state === "backfill" ? "09:16 முதல் history backfill ஆகுது (~40s)…" : st.state === "pre" ? "Market 09:16-க்கு அப்புறம் ஆரம்பிக்கும்." : "இன்னும் data இல்லை — worker ஆரம்பிக்குது…");
+      return;
+    }
+    J = R; M = minuteRows();
+    const L = J.last, n = J.n_strikes, step = J.step, b = J.base_atm;
+    showMsg(!J.is_today ? `கடைசி session ${J.day} data காட்டுது.` : "");
+    $("live").classList.toggle("off", !J.is_today || st.state !== "live");
+    $("hLast").textContent = `${J.day.slice(5)} ${String(L.time).slice(0, 5)}`;
+    $("hSpot").textContent = L.spot == null ? "—" : Number(L.spot).toLocaleString("en-IN", { maximumFractionDigits: 0 });
+    $("hAtm").textContent = L.atm == null ? "—" : Number(L.atm).toLocaleString("en-IN");
+    $("hExp").textContent = J.expiry ? new Date(J.expiry + "T00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : "—";
+    $("hIv").textContent = L.atm_iv == null ? "—" : `${Number(L.atm_iv).toFixed(1)}%`;
+    $("hBase").textContent = b || "—";
+    $("hLot").textContent = `₹/lot (${J.lot || "?"})`;
+    $("hCe").textContent = b ? `${b}→${b + n * step}` : "—";
+    $("hPe").textContent = b ? `${b - n * step}→${b}` : "—";
+    const I = J.inference || {};
+    [["Vega", I.vega], ["Theta", I.theta], ["OI", I.oi]].forEach(([k, v]) => { const el = $("i" + k); el.textContent = v || "—"; el.className = "bd " + (v || ""); });
+    const key = `${want}|${J.day}|${J.rows.length}|${L.time}`;
+    if (key === lastKey) return;
+    const fresh = !lastKey.startsWith(want + "|");
+    lastKey = key;
+    if (S.tab === "Net") { VC.draw(!fresh); if (fresh) VC.pollSpot(); } else drawG();
+  }
+
+  function setIdx(i) {
+    S.idx = i; save();
+    markSeg("ix", "i", i);
+    $("hTitle").textContent = `${i} · Greeks`;
+    document.title = `${i} Greeks`;
+    J = null; M = null; lastKey = ""; VC.clear();
+    ["hSpot", "hAtm", "hExp", "hIv", "hLast", "iVega", "iTheta", "iOI"].forEach(k => $(k).textContent = "—");
+    ["gPlot", "vPlot"].forEach(k => { Plotly.purge($(k)); $(k).innerHTML = `<div class="empty">${i} data load ஆகுது…</div>`; });
+    $("kp").innerHTML = ""; $("mv").innerHTML = ""; $("gTbl").innerHTML = ""; $("vk").innerHTML = "";
+    poll();
+  }
+
+  $("vTf").innerHTML = [1, 3, 5, 10, 15].map(w => `<button type="button" data-v="${w}">${w}m</button>`).join("");
+  document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => show(b.dataset.t));
+  document.querySelectorAll(".sc").forEach(b => b.onclick = () => show(b.dataset.go));
+  document.querySelectorAll("#modeSeg button").forEach(b => b.onclick = () => { S.mode = b.dataset.m; save(); markSeg("modeSeg", "m", S.mode); if (J) drawG(); });
+  document.querySelectorAll("#vTf button").forEach(b => b.onclick = () => { S.tf = +b.dataset.v; save(); markSeg("vTf", "v", S.tf); if (J) VC.draw(false); });
+  document.querySelectorAll("#vTy button").forEach(b => b.onclick = () => { S.type = b.dataset.v; save(); markSeg("vTy", "v", S.type); if (J) VC.draw(true); });
+  document.querySelectorAll("#vVw button").forEach(b => b.onclick = () => { S.view = +b.dataset.v; save(); markSeg("vVw", "v", S.view); if (J) VC.draw(false); });
+  $("gReset").onclick = () => { resetN.g++; if (J) drawG(); };
+  $("spLg").onclick = () => { S.spot = !S.spot; save(); $("spLg").classList.toggle("off", !S.spot); if (J) drawG(); };
+  $("vReset").onclick = () => { S.view = 60; save(); markSeg("vVw", "v", 60); if (J) VC.draw(false); };
+  $("tblBox").addEventListener("toggle", () => { if ($("tblBox").open && J) drawG(); });
+  $("infoBtn").onclick = () => $("more").classList.toggle("on");
+  markSeg("modeSeg", "m", S.mode); markSeg("vTf", "v", S.tf); markSeg("vTy", "v", S.type); markSeg("vVw", "v", S.view);
+  if (window.innerWidth >= 900) $("tblBox").open = true;
+  if (!TABS.includes(S.tab) && S.tab !== "Net") S.tab = "Vega";
+  if (!["NIFTY", "SENSEX"].includes(S.idx)) S.idx = "NIFTY";
+  document.querySelectorAll("#ix button").forEach(b => b.onclick = () => { if (b.dataset.i !== S.idx) setIdx(b.dataset.i); });
+  show(S.tab);
+  setIdx(S.idx);
+  setInterval(() => { if (!document.hidden) poll(); }, 10000);
+  setInterval(() => { if (!document.hidden && S.tab === "Net") VC.pollSpot(); }, 15000);
+</script>
+</body>
+</html>
